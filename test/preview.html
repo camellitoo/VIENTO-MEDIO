@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Casos sintéticos</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <p class="eyebrow">Prueba</p>
+      <h1>Casos sintéticos</h1>
+    </header>
+    <section class="legend">
+      <p><span class="swatch"></span> Buen viento: más de 10 nudos, 3 horas seguidas, de 09:00 a 20:00.</p>
+      <p><span class="pill">suma</span> Horas de esa racha.</p>
+    </section>
+    <main id="cases"></main>
+  </div>
+  <script type="module">
+    import { renderSpot } from "../lib/render.js";
+    import { syntheticForecast } from "./synthetic.js";
+    const forecast = syntheticForecast();
+    document.querySelector("#cases").innerHTML = forecast.spots
+      .map((spot) => renderSpot(spot, { today: "2026-10-25", expandedDates: new Set(["2026-10-25"]), nowHour: null }))
+      .join("");
+  </script>
+</body>
+</html>

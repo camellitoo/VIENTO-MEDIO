@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Viento medio</title>
+  <meta name="description" content="Pronóstico de viento para wingfoil en Malgrat de Mar, Barcarés y Orzales. Media de tres modelos, en nudos.">
+  <meta name="theme-color" content="#efece4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101418" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Viento medio">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="favicon.ico" sizes="32x32">
+  <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="canonical" href="https://camellitoo.github.io/viento-medio/">
+  <meta property="og:title" content="Viento medio">
+  <meta property="og:description" content="Pronóstico de viento para wingfoil en Malgrat de Mar, Barcarés y Orzales.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:url" content="https://camellitoo.github.io/viento-medio/">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    try {
+      var tema = localStorage.getItem("tema");
+      if (tema === "light" || tema === "dark") document.documentElement.setAttribute("data-theme", tema);
+    } catch (error) {}
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand-row">
+        <div>
+          <p class="eyebrow">Pronóstico</p>
+          <h1>Viento medio</h1>
+        </div>
+        <button type="button" id="theme" class="icon-button" aria-label="Cambiar tema">Oscuro</button>
+      </div>
+      <p id="updated" class="updated">Cargando pronóstico…</p>
+      <div class="tabs" role="tablist" aria-label="Spots">
+        <button type="button" role="tab" id="tab-malgrat" data-spot="malgrat" aria-selected="true" aria-controls="app">Malgrat</button>
+        <button type="button" role="tab" id="tab-barcares" data-spot="barcares" aria-selected="false" tabindex="-1" aria-controls="app">Barcarés</button>
+        <button type="button" role="tab" id="tab-orzales" data-spot="orzales" aria-selected="false" tabindex="-1" aria-controls="app">Orzales</button>
+      </div>
+    </header>
+
+    <section class="legend" aria-label="Leyenda">
+      <p><span class="swatch" aria-hidden="true"></span> <strong>Buen viento:</strong> el día se marca cuando la media supera 10 nudos durante al menos 3 horas seguidas, entre las 09:00 y las 20:00.</p>
+      <p><span class="pill">suma</span> Horas de esa racha. Un 12 nudos aislado no basta.</p>
+      <p><span class="src">2/3</span> Fuentes que entraron en ese valor. La velocidad es la media de las que respondieron.</p>
+    </section>
+
+    <div id="banner"></div>
+    <main id="app" tabindex="-1">
+      <p class="fine">Preparando los siete días…</p>
+    </main>
+    <div id="notes"></div>
+
+    <footer>
+      <p>Viento a 10 m, en nudos. Datos de <a href="https://open-meteo.com/">Open-Meteo</a> (CC BY 4.0): GFS de NOAA, IFS de ECMWF e ICON-EU de DWD.</p>
+      <p><a href="https://github.com/camellitoo/viento-medio">Cómo está hecho</a></p>
+    </footer>
+  </div>
+  <noscript><p class="banner wrap">Esta página necesita JavaScript para leer el pronóstico.</p></noscript>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

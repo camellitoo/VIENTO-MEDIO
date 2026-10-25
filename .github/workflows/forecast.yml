@@ -1,0 +1,104 @@
+name: Pronóstico
+
+on:
+  schedule:
+    # 08:00 Europe/Madrid: 06:00 UTC en verano y 07:00 UTC en invierno.
+    - cron: "0 6 * * *"
+    - cron: "0 7 * * *"
+    # 16:00 Europe/Madrid: 14:00 UTC en verano y 15:00 UTC en invierno.
+    - cron: "0 14 * * *"
+    - cron: "0 15 * * *"
+    # 00:00 Europe/Madrid: 22:00 UTC en verano y 23:00 UTC en invierno.
+    - cron: "0 22 * * *"
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pronostico
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.publish.outputs.deploy }}
+      sha: ${{ steps.publish.outputs.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Pruebas
+        run: node --test
+
+      - name: Hora de Madrid
+        id: gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: node scripts/madrid-gate.js
+
+      - name: Descargar modelos
+        if: steps.gate.outputs.run == 'true'
+        run: node scripts/fetch-forecast.js
+
+      - name: Publicar JSON
+        id: publish
+        if: steps.gate.outputs.run == 'true'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/forecast.json
+          changed=false
+          if ! git diff --cached --quiet; then
+            git commit -m "Actualiza el pronóstico de viento"
+            git push
+            changed=true
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [ "$changed" = "true" ] || [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: update
+    if: needs.update.outputs.deploy == 'true'
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.update.outputs.sha }}
+
+      - name: Preparar sitio
+        run: bash scripts/assemble-site.sh
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir artefacto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Desplegar
+        id: deployment
+        uses: actions/deploy-pages@v4
