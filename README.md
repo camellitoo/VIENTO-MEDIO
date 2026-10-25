@@ -57,7 +57,7 @@ El icono abre la app a pantalla completa, sin la barra de Safari.
 
 ## Publicar en GitHub Pages
 
-El workflow **Páginas** despliega el sitio en cada push a `main`. La primera vez, GitHub pide elegir el origen a mano:
+El workflow **Páginas** despliega el sitio en cada push a `main` e intenta activar GitHub Pages por sí solo. Si la primera ejecución sale en rojo porque Pages sigue apagado, hay que elegir el origen a mano:
 
 1. Abre <https://github.com/camellitoo/viento-medio/settings/pages>.
 2. En **Build and deployment**, en **Source**, elige **GitHub Actions**.
