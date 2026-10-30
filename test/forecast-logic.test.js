@@ -2,11 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CRON_UTC_HOURS,
+  FETCH_INTERVAL_MS,
   FETCH_LOCAL_HOURS,
+  FETCH_MARGIN_MS,
+  FETCH_MAX_AGE_MS,
   arrowRotation,
   averageWind,
   compassLabel,
   evaluateWindow,
+  forecastGeneratedAt,
   formatCoord,
   formatKt,
   madridLocalToUtc,
@@ -170,42 +174,60 @@ test("Orzales se escribe con longitud oeste", () => {
   assert.equal(formatCoord(43.0005, -4.0698), "43.0005° N, 4.0698° O");
 });
 
-test("el cron de UTC cubre las 08:00, 16:00 y 00:00 de Madrid en invierno, verano y los cambios de hora", () => {
-  const samples = [
-    ["2026-01-15T07:00:00Z", true],
-    ["2026-01-15T06:00:00Z", false],
-    ["2026-01-15T15:00:00Z", true],
-    ["2026-01-15T14:00:00Z", false],
-    ["2026-01-14T23:00:00Z", true],
-    ["2026-01-14T22:00:00Z", false],
-    ["2026-07-15T06:00:00Z", true],
-    ["2026-07-15T07:00:00Z", false],
-    ["2026-07-15T14:00:00Z", true],
-    ["2026-07-15T15:00:00Z", false],
-    ["2026-07-14T22:00:00Z", true],
-    ["2026-07-14T23:00:00Z", false],
-    ["2026-10-24T22:00:00Z", true],
-    ["2026-10-24T23:00:00Z", false],
-    ["2026-10-25T07:00:00Z", true],
-    ["2026-10-25T06:00:00Z", false],
-    ["2026-10-25T15:00:00Z", true],
-    ["2026-10-25T14:00:00Z", false],
-    ["2026-03-28T23:00:00Z", true],
-    ["2026-03-28T22:00:00Z", false],
-    ["2026-03-29T06:00:00Z", true],
-    ["2026-03-29T07:00:00Z", false],
-    ["2026-03-29T14:00:00Z", true],
-    ["2026-03-29T15:00:00Z", false],
-  ];
-  for (const [iso, expected] of samples) {
-    assert.equal(shouldFetch(new Date(iso)).run, expected, iso);
-  }
-  assert.equal(shouldFetch(new Date("2026-01-15T03:00:00Z"), { force: true }).run, true);
-  assert.equal(shouldFetch(new Date("2026-01-15T03:00:00Z"), { force: true }).reason, "manual");
+test("se descarga si el pronóstico tiene 6 horas o más, con margen sobre las 8", () => {
+  assert.equal(FETCH_INTERVAL_MS, 8 * 60 * 60 * 1000);
+  assert.equal(FETCH_MARGIN_MS, 2 * 60 * 60 * 1000);
+  assert.equal(FETCH_MAX_AGE_MS, 6 * 60 * 60 * 1000);
+
+  const generatedAt = "2026-10-26T00:40:49+01:00";
+  const fresh = shouldFetch(new Date("2026-10-26T02:40:49+01:00"), { generatedAt });
+  assert.equal(fresh.run, false);
+  assert.equal(fresh.reason, "reciente");
+  assert.equal(fresh.ageHours, 2);
+
+  const justBefore = shouldFetch(new Date("2026-10-26T06:40:48+01:00"), { generatedAt });
+  assert.equal(justBefore.run, false);
+  assert.equal(justBefore.reason, "reciente");
+
+  const boundary = shouldFetch(new Date("2026-10-26T06:40:49+01:00"), { generatedAt });
+  assert.equal(boundary.run, true);
+  assert.equal(boundary.reason, "antiguo");
+  assert.equal(boundary.ageHours, 6);
 });
 
-test("cada día de 2026 y 2027 las tres horas locales caen en un cron y su gemela de horario no", () => {
-  const twin = { 6: 7, 7: 6, 14: 15, 15: 14, 22: 23, 23: 22 };
+test("un cron retrasado del 30 de octubre habría descargado el archivo del día 26", () => {
+  const generatedAt = "2026-10-26T00:40:49+01:00";
+  const delayed = shouldFetch(new Date("2026-10-30T02:26:51Z"), { generatedAt });
+  assert.equal(delayed.run, true);
+  assert.equal(delayed.reason, "antiguo");
+  assert.ok(delayed.ageHours > 90);
+
+  const morning = shouldFetch(new Date("2026-10-29T13:54:38Z"), { generatedAt });
+  assert.equal(morning.run, true);
+  assert.equal(morning.reason, "antiguo");
+});
+
+test("el disparo manual siempre descarga y una fecha ausente también", () => {
+  const generatedAt = "2026-10-30T11:00:00+01:00";
+  const now = new Date("2026-10-30T11:20:00+01:00");
+  const manual = shouldFetch(now, { force: true, generatedAt });
+  assert.equal(manual.run, true);
+  assert.equal(manual.reason, "manual");
+
+  assert.equal(shouldFetch(now).run, true);
+  assert.equal(shouldFetch(now).reason, "sin-fecha");
+  assert.equal(shouldFetch(now, { generatedAt: "ayer" }).reason, "sin-fecha");
+  assert.equal(shouldFetch(now, { generatedAt: "" }).reason, "sin-fecha");
+  assert.equal(forecastGeneratedAt("{"), null);
+  assert.equal(forecastGeneratedAt('{"generatedAt":"2026-10-26T00:40:49+01:00"}'), "2026-10-26T00:40:49+01:00");
+  assert.equal(forecastGeneratedAt('{"generatedAt":1}'), null);
+
+  const future = shouldFetch(new Date("2026-10-26T00:00:00Z"), { generatedAt: "2026-10-26T05:00:00+01:00" });
+  assert.equal(future.run, false);
+  assert.equal(future.reason, "reciente");
+});
+
+test("cada día de 2026 y 2027 las tres horas locales caen en un cron de UTC", () => {
   for (let year = 2026; year <= 2027; year += 1) {
     for (let month = 1; month <= 12; month += 1) {
       const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -217,9 +239,6 @@ test("cada día de 2026 y 2027 las tres horas locales caen en un cron y su gemel
           assert.equal(back.day, day);
           assert.equal(back.month, month);
           assert.ok(CRON_UTC_HOURS.includes(utc.getUTCHours()));
-          assert.equal(shouldFetch(utc).run, true);
-          const other = new Date(Date.UTC(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate(), twin[utc.getUTCHours()]));
-          assert.equal(shouldFetch(other).run, false, other.toISOString());
         }
       }
     }
