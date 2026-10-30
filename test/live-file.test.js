@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { validateForecast } from "../lib/build-forecast.js";
 import { SOURCES, SPOTS } from "../lib/spots.js";
+import { forecastUrl } from "../scripts/fetch-forecast.js";
 
 test("el pronóstico guardado trae números reales y el resalte cuadra", () => {
   const data = JSON.parse(readFileSync(new URL("../data/forecast.json", import.meta.url), "utf8"));
@@ -33,4 +34,18 @@ test("el pronóstico guardado trae números reales y el resalte cuadra", () => {
 
   const working = data.sources.filter((source) => source.ok);
   assert.ok(working.length >= 2, "menos de dos modelos respondieron");
+});
+
+test("Barcarés pide la celda de mar en los tres modelos", () => {
+  const spot = SPOTS.find((item) => item.id === "barcares");
+  assert.equal(spot.cellSelection, "sea");
+  const models = SOURCES.map((source) => {
+    const url = forecastUrl(spot, source);
+    assert.equal(url.searchParams.get("cell_selection"), "sea");
+    assert.equal(url.searchParams.get("latitude"), String(spot.latitude));
+    assert.equal(url.searchParams.get("longitude"), String(spot.longitude));
+    assert.equal(url.searchParams.get("models"), source.model);
+    return source.model;
+  });
+  assert.deepEqual(models, ["gfs_seamless", "ecmwf_ifs", "icon_eu"]);
 });

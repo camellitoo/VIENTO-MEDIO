@@ -34,4 +34,9 @@ test("el workflow programa las seis horas UTC y un disparo manual", () => {
   assert.deepEqual(hours.sort((a, b) => a - b), [...CRON_UTC_HOURS].sort((a, b) => a - b));
   assert.match(yaml, /workflow_dispatch/);
   assert.match(yaml, /Europe\/Madrid/);
+  assert.match(yaml, /ref:\s*\$\{\{\s*github\.ref_name\s*\}\}/);
+
+  const gate = readFileSync(new URL("scripts/madrid-gate.js", root), "utf8");
+  assert.match(gate, /forecast\.json/);
+  assert.match(gate, /workflow_dispatch/);
 });
