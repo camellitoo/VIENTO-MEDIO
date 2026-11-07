@@ -38,7 +38,7 @@ La dirección es la media circular de las fuentes con viento, no una media de lo
 
 ## Actualización
 
-Un workflow de GitHub Actions descarga el pronóstico de los próximos 7 días tres veces al día, a las **08:00, 16:00 y 00:00** hora de Madrid. El cron de GitHub va en UTC, así que hay dos horarios por toma (verano e invierno) y el script solo sigue cuando en Madrid es una de esas tres horas. Así el cambio de hora no desplaza las tomas. También se puede lanzar a mano en la pestaña Actions, workflow **Pronóstico**, botón **Run workflow**.
+Un workflow de GitHub Actions descarga el pronóstico de los próximos 7 días tres veces al día, hacia las **08:00, 16:00 y 00:00** hora de Madrid. El cron de GitHub va en UTC y a menudo arranca varias horas más tarde, así que hay dos horarios por toma (verano e invierno) y el script no exige que en Madrid sea exactamente esa hora. Mira `generatedAt` en `data/forecast.json` y vuelve a descargar si el archivo tiene unas 6 horas o más: el intervalo previsto es de 8 horas, con 2 horas de margen para no repetir la toma cuando el otro cron de la misma franja arranca poco después. Un lanzamiento manual siempre descarga, aunque el archivo sea reciente: pestaña Actions, workflow **Pronóstico**, botón **Run workflow**.
 
 El resultado se guarda en `data/forecast.json` y la web lo lee. La cabecera dice cuándo se generó.
 

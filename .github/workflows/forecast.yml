@@ -2,6 +2,10 @@ name: Pronóstico
 
 on:
   schedule:
+    # Tres tomas al día, hacia las 00:00, 08:00 y 16:00 hora de Europe/Madrid.
+    # GitHub solo admite cron en UTC y suele lanzarlo horas más tarde, así que
+    # cada toma tiene el horario de verano y el de invierno. madrid-gate.js no
+    # mira la hora exacta: descarga si data/forecast.json tiene 6 horas o más.
     # 08:00 Europe/Madrid: 06:00 UTC en verano y 07:00 UTC en invierno.
     - cron: "0 6 * * *"
     - cron: "0 7 * * *"
@@ -31,6 +35,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # La rama, no el SHA con el que se encoló el cron. Si el gemelo
+          # espera a que termine esta ejecución, verá el generatedAt nuevo.
+          ref: ${{ github.ref_name }}
 
       - name: Node
         uses: actions/setup-node@v4
@@ -40,7 +48,7 @@ jobs:
       - name: Pruebas
         run: node --test
 
-      - name: Hora de Madrid
+      - name: Decidir descarga
         id: gate
         env:
           EVENT_NAME: ${{ github.event_name }}
